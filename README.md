@@ -4,10 +4,6 @@ This is a starter integration for bringing Very AI's human/liveness identity lay
 
 Very handles the palm/liveness OAuth flow off-chain. A Very-operated issuer service verifies the OAuth `id_token`, derives privacy-preserving commitments, signs the resulting credential with a Zeko-compatible o1js issuer key, and submits it to this Zeko zkApp. The zkApp verifies the issuer signature, anchors the credential commitment, and burns a nullifier so the same proof-of-human event cannot be replayed for the same scope.
 
-### Why the key language matters
-
-The issuer key is a normal Zeko-compatible o1js account key. Under the hood, o1js uses Mina's Pallas-based signature system because Zeko is Mina-compatible. Pallas is the elliptic curve used for the public/private key and signature math; it is not a second identity provider or a separate Very credential format. Very should describe this publicly as a **Zeko issuer key** and keep the private key in KMS or equivalent hardware-backed custody.
-
 ## Architecture
 
 ```mermaid
