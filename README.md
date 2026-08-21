@@ -2,6 +2,8 @@
 
 This is a starter integration for bringing Very AI's human/liveness identity layer to Zeko without putting biometric data, OAuth tokens, or stable user identifiers on-chain. It implements the partnership in two steps: anchor a Very credential, then hand the approved action to Zeko's native Agent Mission-Bound Auth protocol for mission-scoped authorization and anchoring.
 
+Zeko takes VeryAI beyond human verification into a private, programmable trust and settlement layer: Very can continue proving that a real person completed its liveness flow, while Zeko turns that result into a reusable on-chain commitment that apps, agents, wallets, and marketplaces can verify without seeing biometric data or the underlying identity. The larger unlock is that the same proof can govern narrowly scoped actions, prevent replay, support machine-to-machine workflows, and create an auditable settlement trail, giving VeryAI a path from “verified human” to “verified human authorizing valuable digital work.”
+
 Very handles the palm/liveness OAuth flow off-chain. A Very-operated issuer service verifies the OAuth `id_token`, derives privacy-preserving commitments, signs the resulting credential with a Zeko-compatible o1js issuer key, and submits it to this Zeko zkApp. The zkApp verifies the issuer signature, anchors the credential commitment, and burns a nullifier so the same proof-of-human event cannot be replayed for the same scope.
 
 ## Architecture
