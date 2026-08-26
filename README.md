@@ -64,8 +64,8 @@ The native service owns mission schemas, capability construction, signatures, nu
 - `src/very-oauth.ts` - backend adapter for Very OAuth code exchange and credential construction.
 - `scripts/demo-local.ts` - local o1js demo covering credential anchoring.
 - `scripts/demo-mission-bound-auth.ts` - live integration demo against the separately operated native mission authority.
-- `scripts/deploy-zeko.ts` - Zeko testnet deployment scaffold.
-- `scripts/smoke-zeko.ts` - live Zeko smoke for Step 1 with a test credential.
+- `scripts/deploy-zeko.ts` - Zeko Sepolia deployment scaffold.
+- `scripts/smoke-zeko.ts` - live Zeko Sepolia smoke for Step 1 with a test credential.
 - `test/very-ai-credential-registry.test.ts` - local contract test.
 - `test/mission-bound-auth.test.ts` - adapter test proving calls stay at the native protocol boundary.
 - `THIRD_PARTY_NOTICES.md` - licensing and attribution boundary for Step 2.
@@ -115,7 +115,7 @@ Current demo deployment:
 
 These are demo identities only. Replace the issuer and zkApp keys before production use.
 
-Do not reuse a Mina-testnet contract address or state file. The deployment script creates a fresh Step 1-only contract, waits for its account to appear on Sepolia, configures the Very issuer key, and prints the verified deployment identity. The smoke script is intended for that fresh deployment because its witness store starts from empty roots:
+Do not reuse an earlier-network contract address or state file. The deployment script creates a fresh Step 1-only contract, waits for its account to appear on Sepolia, configures the Very issuer key, and prints the verified deployment identity. The smoke script is intended for that fresh deployment because its witness store starts from empty roots:
 
 ```bash
 export ZEKO_ZKAPP_ADDRESS=<fresh-deployment-address>
@@ -147,7 +147,7 @@ Before calling it a full Very production integration, add:
 - an iOS, Android, or Flutter app using VeryOauthSDK to obtain the OAuth `code`;
 - production ID-token signature verification, using Very's published JWKS if tokens are asymmetric, or the agreed backend secret flow if tokens are HMAC-signed;
 - a KMS-held Very issuer key for Zeko attestations;
-- a funded Zeko testnet deployer;
+- a funded Zeko Sepolia deployer;
 - an authorized deployment of the native Agent Mission-Bound Auth service, with its production license and fee/anchoring conditions preserved.
 
 The Zeko credential boundary is complete for the prototype. Step 2 is now represented by a native-protocol adapter and must be exercised against the separately licensed mission authority before calling the full partnership integration complete.
