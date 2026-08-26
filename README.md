@@ -93,24 +93,29 @@ For real proofs:
 PROOFS_ENABLED=true npm run demo
 ```
 
-## Zeko Testnet Deploy
+## Zeko Ethereum Sepolia Deploy
 
-Create `.env` from `.env.example`, fund the deployer on Zeko testnet, then run:
+This demo targets Zeko on Ethereum Sepolia. Create `.env` from `.env.example`, fund the deployer with sETH, and run:
 
 ```bash
 npm run deploy:zeko
 ```
 
-Default endpoints:
+Default network configuration:
 
-- `https://testnet.zeko.io/graphql`
-- `https://archive.testnet.zeko.io/graphql`
+- GraphQL: `https://sepolia.zeko.io/graphql`
+- o1js/Auro signing domain: `testnet` (intentional for Zeko Sepolia)
+- Transaction fee: `200000` base units (`0.0002 sETH`)
+- Archive endpoint: optional; leave `ZEKO_ARCHIVE_URL` empty unless a compatible archive service is available.
 
-An earlier combined prototype was deployed to Zeko testnet at:
+Current demo deployment:
 
-`B62qoxnX9dRxQFLy5E5H76NNKL4dk4a37Fadjn6NH2F7AxKAALnSHDs`
+- zkApp: `B62qoYAimKDP91netrAB6RsPEDjiY8sJ766LjLUdD9uVmi6EFzYrRZi`
+- issuer: `B62qkorFr2koERcVVReaT83nFqC7EUukbN9y3yQPoWgwoyjxE5UVwgH`
 
-That address belongs to the earlier prototype and should not be used as the native integration deployment. Deploy the current Step 1-only contract fresh with a Very-controlled issuer key before production use. The smoke script is intended for a fresh deployment because its witness store starts from empty roots:
+These are demo identities only. Replace the issuer and zkApp keys before production use.
+
+Do not reuse a Mina-testnet contract address or state file. The deployment script creates a fresh Step 1-only contract, waits for its account to appear on Sepolia, configures the Very issuer key, and prints the verified deployment identity. The smoke script is intended for that fresh deployment because its witness store starts from empty roots:
 
 ```bash
 export ZEKO_ZKAPP_ADDRESS=<fresh-deployment-address>

@@ -3,7 +3,6 @@ import "dotenv/config";
 import {
   Field,
   MerkleMap,
-  Mina,
   PrivateKey,
   PublicKey,
   Signature,
@@ -14,11 +13,15 @@ import {
 import {
   VeryAiCredentialRegistry,
   buildVeryCredential,
+  configureZekoNetwork,
+  createZekoTransaction,
+  fetchZekoAccount,
   issuerAuthorizationMessage,
+  zekoGraphqlUrl,
+  zekoTxFee
 } from "../src/index.js";
 
-const graphQlUrl = process.env.ZEKO_GRAPHQL_URL ?? "https://testnet.zeko.io/graphql";
-const archiveUrl = process.env.ZEKO_ARCHIVE_URL ?? "https://archive.testnet.zeko.io/graphql";
+const graphQlUrl = zekoGraphqlUrl();
 const address = process.env.ZEKO_ZKAPP_ADDRESS;
 const deployerPrivateKey = process.env.ZEKO_DEPLOYER_PRIVATE_KEY;
 const issuerPrivateKey = process.env.VERY_ISSUER_PRIVATE_KEY;
@@ -29,19 +32,20 @@ if (!address || !deployerPrivateKey || !issuerPrivateKey) {
   );
 }
 
-Mina.setActiveInstance(
-  Mina.Network({ mina: graphQlUrl, archive: archiveUrl, networkId: "testnet" })
-);
+configureZekoNetwork();
 
 const deployer = PrivateKey.fromBase58(deployerPrivateKey);
 const issuer = PrivateKey.fromBase58(issuerPrivateKey);
 const holder = PrivateKey.fromBase58(process.env.VERY_HOLDER_PRIVATE_KEY ?? deployerPrivateKey);
 const zkapp = new VeryAiCredentialRegistry(PublicKey.fromBase58(address));
 
-const zkappAccount = await fetchAccount({ publicKey: zkapp.address }, graphQlUrl);
-if (!zkappAccount.account) {
-  throw new Error(`Zeko zkApp account lookup failed: ${zkappAccount.error?.statusText ?? "not found"}`);
+const zkappAccount = await fetchZekoAccount(zkapp.address.toBase58());
+if (!zkappAccount) {
+  throw new Error(`Zeko zkApp account lookup failed: ${zkapp.address.toBase58()} not found`);
 }
+// Populate o1js' account cache before building a stateful transaction.
+await fetchAccount({ publicKey: zkapp.address });
+await fetchAccount({ publicKey: deployer.toPublicKey() });
 
 console.log("Compiling VeryAiCredentialRegistry for live smoke...");
 await VeryAiCredentialRegistry.compile();
@@ -78,13 +82,16 @@ const issuerSignature = Signature.create(
   issuerAuthorizationMessage(zkapp.address, UInt64.zero, credential)
 );
 
-const feePayer = { sender: deployer.toPublicKey(), fee: 100_000_000 };
+const feePayer = { sender: deployer.toPublicKey(), fee: zekoTxFee() };
 
-const anchorTx = await Mina.transaction(feePayer, async () => {
+const anchorTx = await createZekoTransaction(feePayer.sender, feePayer.fee, async () => {
   await zkapp.anchorCredential(credential, issuerSignature, credentialWitness, nullifierWitness);
 });
 await anchorTx.prove();
-await anchorTx.sign([deployer]).send();
+const anchorResult = await anchorTx.sign([deployer]).send();
+if (anchorResult.status === "rejected") {
+  throw new Error(`Zeko rejected credential anchor: ${JSON.stringify(anchorResult)}`);
+}
 
 console.log(JSON.stringify({
   zkappAddress: address,

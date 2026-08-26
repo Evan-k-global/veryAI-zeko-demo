@@ -20,3 +20,14 @@ export {
   type CheckpointRequest,
   type MissionBundleRequest
 } from "./mission-bound-auth.js";
+export {
+  ZEKO_SEPOLIA_GRAPHQL_URL,
+  ZEKO_SEPOLIA_NETWORK_ID,
+  configureZekoNetwork,
+  createZekoTransaction,
+  fetchZekoAccount,
+  zekoArchiveUrl,
+  zekoGraphqlUrl,
+  zekoNetworkId,
+  zekoTxFee
+} from "./zeko-network.js";

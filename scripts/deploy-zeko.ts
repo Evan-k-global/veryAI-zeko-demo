@@ -1,8 +1,16 @@
 import "dotenv/config";
 
-import { AccountUpdate, fetchAccount, Mina, PrivateKey } from "o1js";
+import { AccountUpdate, fetchAccount, PrivateKey, PublicKey } from "o1js";
 
-import { VeryAiCredentialRegistry } from "../src/index.js";
+import {
+  VeryAiCredentialRegistry,
+  configureZekoNetwork,
+  createZekoTransaction,
+  fetchZekoAccount,
+  zekoGraphqlUrl,
+  zekoNetworkId,
+  zekoTxFee
+} from "../src/index.js";
 
 const deployerPrivateKey = process.env.ZEKO_DEPLOYER_PRIVATE_KEY;
 const zkappPrivateKey = process.env.ZEKO_ZKAPP_PRIVATE_KEY;
@@ -14,53 +22,60 @@ if (!deployerPrivateKey || !zkappPrivateKey || !issuerPrivateKey) {
   );
 }
 
-const network = Mina.Network({
-  mina: process.env.ZEKO_GRAPHQL_URL ?? "https://testnet.zeko.io/graphql",
-  archive: process.env.ZEKO_ARCHIVE_URL ?? "https://archive.testnet.zeko.io/graphql",
-  networkId: "testnet"
-});
-Mina.setActiveInstance(network);
+configureZekoNetwork();
 
 const deployer = PrivateKey.fromBase58(deployerPrivateKey);
 const zkappKey = PrivateKey.fromBase58(zkappPrivateKey);
 const issuerKey = PrivateKey.fromBase58(issuerPrivateKey);
 const zkapp = new VeryAiCredentialRegistry(zkappKey.toPublicKey());
 
-const deployerAccount = await fetchAccount(
-  { publicKey: deployer.toPublicKey() },
-  process.env.ZEKO_GRAPHQL_URL ?? "https://testnet.zeko.io/graphql"
-);
-if (!deployerAccount.account) {
+const deployerAccount = await fetchZekoAccount(deployer.toPublicKey().toBase58());
+if (!deployerAccount) {
   throw new Error(
-    `Deployer account lookup failed: ${deployerAccount.error?.statusText ?? "not found"}`
+    "Deployer account lookup failed: not found"
   );
 }
 
-console.log("Compiling VeryAiCredentialRegistry...");
+const fee = zekoTxFee();
+console.log(`Compiling VeryAiCredentialRegistry for ${zekoGraphqlUrl()}...`);
 await VeryAiCredentialRegistry.compile();
 
-const tx = await Mina.transaction(
-  { sender: deployer.toPublicKey(), fee: 100_000_000 },
-  async () => {
-    AccountUpdate.fundNewAccount(deployer.toPublicKey());
-    await zkapp.deploy();
-  }
-);
+const tx = await createZekoTransaction(deployer.toPublicKey(), fee, async () => {
+  AccountUpdate.fundNewAccount(deployer.toPublicKey());
+  await zkapp.deploy();
+});
 
 await tx.prove();
-await tx.sign([deployer, zkappKey]).send();
+const deployResult = await tx.sign([deployer, zkappKey]).send();
+if (deployResult.status === "rejected") {
+  throw new Error(`Zeko rejected deployment: ${JSON.stringify(deployResult)}`);
+}
 
-const configureTx = await Mina.transaction(
-  { sender: deployer.toPublicKey(), fee: 100_000_000 },
-  async () => {
-    await zkapp.configure(issuerKey.toPublicKey());
+async function waitForAccount(publicKey: PublicKey): Promise<void> {
+  for (let attempt = 1; attempt <= 45; attempt += 1) {
+    const result = await fetchZekoAccount(publicKey.toBase58());
+    if (result) return;
+    if (attempt < 45) await new Promise((resolve) => setTimeout(resolve, 2000));
   }
-);
+  throw new Error(`Timed out waiting for account ${publicKey.toBase58()} to appear on Zeko.`);
+}
+
+await waitForAccount(zkapp.address);
+await fetchAccount({ publicKey: zkapp.address });
+
+const configureTx = await createZekoTransaction(deployer.toPublicKey(), fee, async () => {
+  await zkapp.configure(issuerKey.toPublicKey());
+});
 await configureTx.prove();
-await configureTx.sign([deployer, zkappKey]).send();
+const configureResult = await configureTx.sign([deployer, zkappKey]).send();
+if (configureResult.status === "rejected") {
+  throw new Error(`Zeko rejected issuer configuration: ${JSON.stringify(configureResult)}`);
+}
 
 console.log(JSON.stringify({
   zkappAddress: zkapp.address.toBase58(),
   issuerPublicKey: issuerKey.toPublicKey().toBase58(),
-  graphQlUrl: process.env.ZEKO_GRAPHQL_URL ?? "https://testnet.zeko.io/graphql"
+  graphQlUrl: zekoGraphqlUrl(),
+  networkId: zekoNetworkId(),
+  fee
 }, null, 2));

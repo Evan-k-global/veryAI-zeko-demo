@@ -1,9 +1,10 @@
 import "dotenv/config";
 
-import { Mina, PrivateKey, fetchAccount } from "o1js";
+import { PrivateKey } from "o1js";
 
-const zekoGraphql = process.env.ZEKO_GRAPHQL_URL ?? "https://testnet.zeko.io/graphql";
-const zekoArchive = process.env.ZEKO_ARCHIVE_URL ?? "https://archive.testnet.zeko.io/graphql";
+import { configureZekoNetwork, fetchZekoAccount, zekoGraphqlUrl, zekoNetworkId } from "../src/index.js";
+
+const zekoGraphql = zekoGraphqlUrl();
 
 const required = [
   "VERY_CLIENT_ID",
@@ -14,31 +15,25 @@ const required = [
   "ZEKO_ZKAPP_PRIVATE_KEY"
 ];
 
-console.log("Very AI on Zeko readiness\n");
+console.log(`Very AI on Zeko readiness (${zekoGraphql}, networkId=${zekoNetworkId()})\n`);
 for (const name of required) {
   console.log(`${process.env[name] ? "ok" : "missing"} ${name}`);
 }
 
-Mina.setActiveInstance(
-  Mina.Network({
-    mina: zekoGraphql,
-    archive: zekoArchive,
-    networkId: "testnet"
-  })
-);
+configureZekoNetwork();
 
 async function inspectKey(label: string, privateKeyBase58?: string) {
   if (!privateKeyBase58) return;
   const publicKey = PrivateKey.fromBase58(privateKeyBase58).toPublicKey();
-  const response = await fetchAccount({ publicKey }, zekoGraphql);
+  const response = await fetchZekoAccount(publicKey.toBase58());
   console.log(`\n${label}`);
   console.log(`publicKey ${publicKey.toBase58()}`);
-  if (!response.account) {
-    console.log(`account lookup failed: ${response.error?.statusText ?? "not found"}`);
+  if (!response) {
+    console.log("account lookup failed: not found");
     return;
   }
-  console.log(`balance ${response.account.balance.toString()} nanomina`);
-  console.log(`nonce ${response.account.nonce.toString()}`);
+  console.log(`balance ${response.balance.total} base units`);
+  console.log(`nonce ${response.nonce}`);
 }
 
 try {

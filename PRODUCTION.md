@@ -47,11 +47,16 @@ Once the separately licensed native mission authority is running:
 MISSION_AUTH_BASE_URL=http://127.0.0.1:8787 npm run demo:mission
 ```
 
-For a Zeko testnet deployment, create `.env` from `.env.example`, fund a deployer, and run:
+For a Zeko Ethereum Sepolia deployment, create `.env` from `.env.example`, fund the deployer with sETH, and run:
 
 ```bash
 npm run deploy:zeko
 ```
+
+The Sepolia defaults are `ZEKO_GRAPHQL_URL=https://sepolia.zeko.io/graphql`,
+`ZEKO_NETWORK_ID=testnet`, and `ZEKO_TX_FEE=200000`. The `testnet` signing domain is
+intentional for Zeko Sepolia. Leave `ZEKO_ARCHIVE_URL` empty unless a compatible archive
+service is available.
 
 Run the smoke script only against a fresh deployment unless you replace its in-memory witness stores with a persisted/indexed witness service:
 
